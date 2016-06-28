@@ -4,12 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "prot index.js -i -o",
+    "start": "prot index.js -i -o -- -t brfs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Michael Feldstein <msfeldstein@gmail.com>",
   "license": "ISC",
   "dependencies": {
+    "noisejs": "^2.1.0",
+    "three": "^0.78.0",
     "three-orbit-controls": "^72.0.0"
   }
 }

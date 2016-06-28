@@ -3,10 +3,10 @@ module.exports = function(THREE, scene) {
 	light.position.set(50, 30, 40)
 	scene.add(light)
 
-	light = new THREE.PointLight(0xef20cd, 2, 100)
+	light = new THREE.PointLight(0xffffff, 2, 100)
 	light.position.set(-50, -30, 40)
 	scene.add(light)
 
-	light = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 );
+	light = new THREE.HemisphereLight( 0xffffbb, 0x080820, 0.1 );
 	scene.add( light );
 }
