@@ -10,10 +10,11 @@ module.exports = function(THREE, groundGeometry) {
 	)
 	scene.add(ground)
 	ground.rotation.x = -Math.PI / 2
-	ground.position.y = -4
+	ground.position.y = -6
 
 	var numObjects = 10
 	var r = 10
+	var shapes = []
 	for (var i = 0; i < numObjects; i++) {
 		var theta = -Math.PI * i / numObjects
 		var box = new THREE.Mesh(
@@ -22,6 +23,7 @@ module.exports = function(THREE, groundGeometry) {
 		)
 		box.position.set(r * Math.cos(theta), 0, r * Math.sin(theta))
 		scene.add(box)
+		shapes.push(box)
 	}
 
 	var skybox = require('./skybox')(THREE, 'assets/skybox/clouds/', 'jpg')
@@ -35,8 +37,21 @@ module.exports = function(THREE, groundGeometry) {
 
 	scene.add(model)
 	model.position.z = -5
-	model.scale.set(10, 10, 10)
+	window.portal = portalMesh
 	scene.portal = portalMesh
+
+
+
+		var animate = function() {
+			requestAnimationFrame(animate)
+			for (var i = 0; i < shapes.length; i++) {
+				var shape = shapes[i]
+				shape.position.y = Math.sin(Date.now() / 1000 + i) * 3
+			}
+		}
+
+		requestAnimationFrame(animate)
+
 
 	return scene
 

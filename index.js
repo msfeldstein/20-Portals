@@ -7,7 +7,7 @@ var fs = require('fs')
 var Noise = require('noisejs').Noise
 var noise = new Noise(0)
 
-var camera1 = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10000)
+var camera1 = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.01, 10000)
 camera1.position.z = .1
 
 var controls = new FlyControls(camera1)
@@ -26,6 +26,7 @@ renderer.autoClear = false
 document.body.appendChild(renderer.domElement)
 document.body.style.margin = 0
 var groundGeometry = new THREE.PlaneGeometry(100, 100, 20, 20)
+groundGeometry.dynamic = true
 for (var i = 0; i < groundGeometry.vertices.length; i++) {
 	var vert = groundGeometry.vertices[i]
 	vert.z = noise.simplex3(vert.x, vert.y, 0) * 3
@@ -51,43 +52,39 @@ var screenSpaceMaterial = new THREE.ShaderMaterial({
 	fragmentShader: fs.readFileSync('./ScreenMaskShader.fs').toString()
 })
 scene1.portal.material = screenSpaceMaterial
-
-var renderTarget = new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight, {
-	minFilter: THREE.LinearFilter,
-	magFilter: THREE.LinearFilter,
-	format: THREE.RGBFormat,
-	stencilBuffer: true
-} );
-// scene1.portal.material.map = otherWorldTarget.texture
-
-var composer = new EffectComposer(renderer, renderTarget)
-
-var clearPass = new THREE.ClearPass()
-var clearMaskPass = new THREE.ClearMaskPass()
-var scene1Pass = new THREE.RenderPass(scene1, camera1)
-var maskPass1 = new THREE.MaskPass(portalScene, camera1)
-var outputPass = new THREE.ShaderPass(THREE.CopyShader)
-outputPass.renderToScreen = true
-
-var maskCamera = camera1.clone()
-
 var showOther = false
 document.body.addEventListener('keypress', () => {
 	showOther = !showOther
 })
 var clock = new THREE.Clock()
+scene1.updateMatrixWorld()
+var portalBox = new THREE.Box3().setFromObject(scene1.portal)
+var vector = new THREE.Vector3();
+vector.setFromMatrixPosition( scene1.portal.matrixWorld );
+
+portalBox.translate(vector)
+portalBox.expandByVector(new THREE.Vector3(0, 0, 6))
+var inPrimaryWorld = true
+
 var animate = function(t) {
 	requestAnimationFrame(animate)
+	if (inPrimaryWorld && portalBox.containsPoint(camera1.position)) {
+		inPrimaryWorld = false
+	}
+	for (var i = 0; i < groundGeometry.vertices.length; i++) {
+		var vert = groundGeometry.vertices[i]
+		vert.z = noise.simplex3(vert.x, vert.y, Date.now() / 8000) * 5
+	}
+	groundGeometry.verticesNeedUpdate = true
 	controls.update( clock.getDelta() );
-	// if (!showOther)
-		// renderer.render(scene2, camera1)
-	// else
-	// 	renderer.render(otherScene, camera1)
 	renderer.clearTarget(otherWorldTarget)
-	renderer.render(scene2, camera1, otherWorldTarget, true)
+	var mainScene = inPrimaryWorld ? scene1 : scene2
+	var otherScene = inPrimaryWorld ? scene2 : scene1
+	renderer.render(otherScene, camera1, otherWorldTarget, true)
 
-	renderer.render(scene1, camera1)
+	renderer.render(mainScene, camera1)
 }
+
 window.THREE = THREE
 window.scene = scene1
 requestAnimationFrame(animate)
