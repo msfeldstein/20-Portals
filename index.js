@@ -33,8 +33,7 @@ for (var i = 0; i < groundGeometry.vertices.length; i++) {
 }
 var scene1 = require('./scene1')(THREE, groundGeometry)
 var scene2 = require('./scene2')(THREE, groundGeometry)
-var portalScene = require('./portal-scene')(THREE)
-portalScene.add(camera1.clone())
+
 
 var otherWorldTarget = new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight, {
 	minFilter: THREE.LinearFilter,
@@ -52,6 +51,8 @@ var screenSpaceMaterial = new THREE.ShaderMaterial({
 	fragmentShader: fs.readFileSync('./ScreenMaskShader.fs').toString()
 })
 scene1.portal.material = screenSpaceMaterial
+scene2.portal.material = screenSpaceMaterial
+
 var showOther = false
 document.body.addEventListener('keypress', () => {
 	showOther = !showOther
@@ -65,12 +66,18 @@ vector.setFromMatrixPosition( scene1.portal.matrixWorld );
 portalBox.translate(vector)
 portalBox.expandByVector(new THREE.Vector3(0, 0, 6))
 var inPrimaryWorld = true
+var canSwitch = false
 
 var animate = function(t) {
 	requestAnimationFrame(animate)
-	if (inPrimaryWorld && portalBox.containsPoint(camera1.position)) {
-		inPrimaryWorld = false
+	if (canSwitch && portalBox.containsPoint(camera1.position)) {
+		inPrimaryWorld = !inPrimaryWorld
+		// scene1.portal.visible = inPrimaryWorld
+		// scene2.portal.visible = !inPrimaryWorld
+		canSwitch = false
 	}
+
+	if (!portalBox.containsPoint(camera1.position)) canSwitch = true
 	for (var i = 0; i < groundGeometry.vertices.length; i++) {
 		var vert = groundGeometry.vertices[i]
 		vert.z = noise.simplex3(vert.x, vert.y, Date.now() / 8000) * 5
@@ -81,7 +88,6 @@ var animate = function(t) {
 	var mainScene = inPrimaryWorld ? scene1 : scene2
 	var otherScene = inPrimaryWorld ? scene2 : scene1
 	renderer.render(otherScene, camera1, otherWorldTarget, true)
-
 	renderer.render(mainScene, camera1)
 }
 

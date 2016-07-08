@@ -15,6 +15,11 @@ module.exports = function(THREE, groundGeometry) {
 		scene.add(box)
 	}
 
+	var portal = require('./portal')(THREE, scene)
+	scene.portal = portal
+	scene.add(portal)
+	portal.position.z = -5
+	// portal.visible = false
 
 	var ground = new THREE.Mesh(
 		groundGeometry,
