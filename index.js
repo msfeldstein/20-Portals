@@ -6,9 +6,10 @@ var FlyControls = require('./lib/FlyControls')(THREE)
 var fs = require('fs')
 var Noise = require('noisejs').Noise
 var noise = new Noise(0)
+var glslify = require('glslify')
 
 var camera1 = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.01, 10000)
-camera1.position.z = .1
+camera1.position.z = 1
 
 var controls = new FlyControls(camera1)
 controls.movementSpeed = 10;
@@ -43,12 +44,13 @@ var otherWorldTarget = new THREE.WebGLRenderTarget( window.innerWidth, window.in
 
 var screenSpaceMaterial = new THREE.ShaderMaterial({
 	uniforms: {
+		time: {type: 'f', value: 0},
 		texture: {type: 't', value: otherWorldTarget.texture},
 		renderSize: {type: 'v2', value: [window.innerWidth, window.innerHeight]}
 	},
 	side: THREE.DoubleSide,
-	vertexShader: fs.readFileSync('./ScreenMaskShader.vs').toString(),
-	fragmentShader: fs.readFileSync('./ScreenMaskShader.fs').toString()
+	vertexShader: glslify('./ScreenMaskShader.vs'),
+	fragmentShader: glslify('./ScreenMaskShader.fs')
 })
 scene1.portal.material = screenSpaceMaterial
 scene2.portal.material = screenSpaceMaterial
@@ -67,9 +69,10 @@ portalBox.translate(vector)
 portalBox.expandByVector(new THREE.Vector3(0, 0, 6))
 var inPrimaryWorld = true
 var canSwitch = false
-
+var startTime = Date.now()
 var animate = function(t) {
 	requestAnimationFrame(animate)
+	screenSpaceMaterial.uniforms.time.value = startTime - Date.now()
 	if (canSwitch && portalBox.containsPoint(camera1.position)) {
 		inPrimaryWorld = !inPrimaryWorld
 		// scene1.portal.visible = inPrimaryWorld

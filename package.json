@@ -4,12 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "prot index.js -i -o -- -t brfs",
+    "start": "prot index.js -i -o -- -t brfs -t glslify",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Michael Feldstein <msfeldstein@gmail.com>",
   "license": "ISC",
   "dependencies": {
+    "glsl-noise": "0.0.0",
+    "glslify": "^5.1.0",
     "noisejs": "^2.1.0",
     "three": "^0.78.0",
     "three-orbit-controls": "^72.0.0"

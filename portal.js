@@ -1,25 +1,14 @@
 module.exports = function(THREE, scene) {
-	var Noise = require('noisejs').Noise
-	var noise = new Noise(0)
+	var Noisering = require('./noisering/noisering')(THREE)
 
-	var geometry = new THREE.CylinderGeometry( 2, 2, .1, 128)
+	var geometry = new THREE.CylinderGeometry( 2, 2, .1, 32)
 	var matColor = new THREE.MeshBasicMaterial( {color:0xffffff})
 	var portal = new THREE.Mesh( geometry, matColor)
 	portal.rotation.x = Math.PI / 2
+	var ring = new Noisering()
+	portal.add(ring)
 
-	for (var i = 0; i < geometry.vertices.length; i++ ) {
-		var vtx = geometry.vertices[i]
-		if (vtx.x == 0 || vtx.z == 0) continue
 
-		var dot = new THREE.Mesh(
-			new THREE.SphereGeometry(.01, 8, 8),
-			new THREE.MeshLambertMaterial({color: 0x111111})
-		)
-		vtx.theta = i
-		vtx.ball = dot
-
-		portal.add(dot)
-	}
 	var animate = function() {
 		requestAnimationFrame(animate)
 

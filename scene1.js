@@ -30,16 +30,6 @@ module.exports = function(THREE, groundGeometry) {
 	var skybox = require('./skybox')(THREE, 'assets/skybox/clouds/', 'jpg')
 	scene.add(skybox)
 
-	// var loader = new OBJLoader()
-	// var objSource = require('fs').readFileSync('./assets/window.obj').toString()
-	// var model = loader.parse(objSource)
-	//
-	// var portalMesh = model.children.filter((c) => c.name == "Portal_Cube")[0]
-	//
-	// scene.add(model)
-	// model.position.z = -5
-	// window.portal = portalMesh
-	// scene.portal = portalMesh
 	scene.portal = portal
 	scene.add(portal)
 	portal.position.z = -5
