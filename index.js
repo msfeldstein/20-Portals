@@ -62,11 +62,10 @@ document.body.addEventListener('keypress', () => {
 var clock = new THREE.Clock()
 scene1.updateMatrixWorld()
 var portalBox = new THREE.Box3().setFromObject(scene1.portal)
-var vector = new THREE.Vector3();
-vector.setFromMatrixPosition( scene1.portal.matrixWorld );
+var helper = new THREE.BoundingBoxHelper(scene1.portal)
+helper.update()
+scene1.add(helper)
 
-portalBox.translate(vector)
-portalBox.expandByVector(new THREE.Vector3(0, 0, 6))
 var inPrimaryWorld = true
 var canSwitch = false
 var startTime = Date.now()
@@ -92,6 +91,7 @@ var animate = function(t) {
 	var otherScene = inPrimaryWorld ? scene2 : scene1
 	renderer.render(otherScene, camera1, otherWorldTarget, true)
 	renderer.render(mainScene, camera1)
+
 }
 
 window.THREE = THREE
