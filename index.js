@@ -64,7 +64,7 @@ scene1.updateMatrixWorld()
 var portalBox = new THREE.Box3().setFromObject(scene1.portal)
 var helper = new THREE.BoundingBoxHelper(scene1.portal)
 helper.update()
-scene1.add(helper)
+// scene1.add(helper)
 
 var inPrimaryWorld = true
 var canSwitch = false

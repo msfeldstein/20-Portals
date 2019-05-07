@@ -4,12 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "prot index.js -i -o -- -t brfs -t glslify",
+    "start": "budo index.js -i -o -- -t brfs -t glslify",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "browserify": { "transform": [ "brfs", "glslify" ] },
   "author": "Michael Feldstein <msfeldstein@gmail.com>",
   "license": "ISC",
   "dependencies": {
+    "brfs": "^2.0.2",
     "glsl-noise": "0.0.0",
     "glslify": "^5.1.0",
     "noisejs": "^2.1.0",
