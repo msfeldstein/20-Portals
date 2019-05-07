@@ -4,10 +4,10 @@ var OrbitControls = require('three-orbit-controls')(THREE)
 var EffectComposer = require('./lib/EffectComposer')(THREE)
 var RenderPass = require('./lib/RenderPass')(THREE)
 var FlyControls = require('./lib/FlyControls')(THREE)
-var fs = require('fs')
+
 var Noise = require('noisejs').Noise
 var noise = new Noise(0)
-var glslify = require('glslify')
+
 
 var camera1 = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.01, 10000)
 camera1.position.z = 1
@@ -50,8 +50,8 @@ var screenSpaceMaterial = new THREE.ShaderMaterial({
 		renderSize: {type: 'v2', value: [window.innerWidth, window.innerHeight]}
 	},
 	side: THREE.DoubleSide,
-	vertexShader: glslify('./ScreenMaskShader.vs'),
-	fragmentShader: glslify('./ScreenMaskShader.fs')
+	vertexShader: "#define GLSLIFY 1\nvoid main() {\n    gl_Position = projectionMatrix *\n                  modelViewMatrix * vec4(position, 1.0 );\n}\n",
+	fragmentShader: "precision highp float;\n#define GLSLIFY 1\n\n// varying vec2 vUv;\nuniform float color;\n// Name it whatever it was named in the uniforms object\nuniform sampler2D texture;\nuniform vec2 renderSize;\nuniform float time;\n//\n// Description : Array and textureless GLSL 2D/3D/4D simplex\n//               noise functions.\n//      Author : Ian McEwan, Ashima Arts.\n//  Maintainer : ijm\n//     Lastmod : 20110822 (ijm)\n//     License : Copyright (C) 2011 Ashima Arts. All rights reserved.\n//               Distributed under the MIT License. See LICENSE file.\n//               https://github.com/ashima/webgl-noise\n//\n\nvec3 mod289(vec3 x) {\n  return x - floor(x * (1.0 / 289.0)) * 289.0;\n}\n\nvec4 mod289(vec4 x) {\n  return x - floor(x * (1.0 / 289.0)) * 289.0;\n}\n\nvec4 permute(vec4 x) {\n     return mod289(((x*34.0)+1.0)*x);\n}\n\nvec4 taylorInvSqrt(vec4 r)\n{\n  return 1.79284291400159 - 0.85373472095314 * r;\n}\n\nfloat snoise(vec3 v)\n  {\n  const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;\n  const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);\n\n// First corner\n  vec3 i  = floor(v + dot(v, C.yyy) );\n  vec3 x0 =   v - i + dot(i, C.xxx) ;\n\n// Other corners\n  vec3 g = step(x0.yzx, x0.xyz);\n  vec3 l = 1.0 - g;\n  vec3 i1 = min( g.xyz, l.zxy );\n  vec3 i2 = max( g.xyz, l.zxy );\n\n  //   x0 = x0 - 0.0 + 0.0 * C.xxx;\n  //   x1 = x0 - i1  + 1.0 * C.xxx;\n  //   x2 = x0 - i2  + 2.0 * C.xxx;\n  //   x3 = x0 - 1.0 + 3.0 * C.xxx;\n  vec3 x1 = x0 - i1 + C.xxx;\n  vec3 x2 = x0 - i2 + C.yyy; // 2.0*C.x = 1/3 = C.y\n  vec3 x3 = x0 - D.yyy;      // -1.0+3.0*C.x = -0.5 = -D.y\n\n// Permutations\n  i = mod289(i);\n  vec4 p = permute( permute( permute(\n             i.z + vec4(0.0, i1.z, i2.z, 1.0 ))\n           + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))\n           + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));\n\n// Gradients: 7x7 points over a square, mapped onto an octahedron.\n// The ring size 17*17 = 289 is close to a multiple of 49 (49*6 = 294)\n  float n_ = 0.142857142857; // 1.0/7.0\n  vec3  ns = n_ * D.wyz - D.xzx;\n\n  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);  //  mod(p,7*7)\n\n  vec4 x_ = floor(j * ns.z);\n  vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)\n\n  vec4 x = x_ *ns.x + ns.yyyy;\n  vec4 y = y_ *ns.x + ns.yyyy;\n  vec4 h = 1.0 - abs(x) - abs(y);\n\n  vec4 b0 = vec4( x.xy, y.xy );\n  vec4 b1 = vec4( x.zw, y.zw );\n\n  //vec4 s0 = vec4(lessThan(b0,0.0))*2.0 - 1.0;\n  //vec4 s1 = vec4(lessThan(b1,0.0))*2.0 - 1.0;\n  vec4 s0 = floor(b0)*2.0 + 1.0;\n  vec4 s1 = floor(b1)*2.0 + 1.0;\n  vec4 sh = -step(h, vec4(0.0));\n\n  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;\n  vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;\n\n  vec3 p0 = vec3(a0.xy,h.x);\n  vec3 p1 = vec3(a0.zw,h.y);\n  vec3 p2 = vec3(a1.xy,h.z);\n  vec3 p3 = vec3(a1.zw,h.w);\n\n//Normalise gradients\n  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));\n  p0 *= norm.x;\n  p1 *= norm.y;\n  p2 *= norm.z;\n  p3 *= norm.w;\n\n// Mix final noise value\n  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);\n  m = m * m;\n  return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1),\n                                dot(p2,x2), dot(p3,x3) ) );\n  }\n\nvoid main(void) {\n    vec2 p = gl_FragCoord.xy / renderSize;\n    // p += noise(vec3(p, time / 1000.0)) * 0.10;\n    gl_FragColor = texture2D(texture, p);\n}\n"
 })
 scene1.portal.material = screenSpaceMaterial
 scene2.portal.material = screenSpaceMaterial
@@ -65,7 +65,7 @@ scene1.updateMatrixWorld()
 var portalBox = new THREE.Box3().setFromObject(scene1.portal)
 var helper = new THREE.BoundingBoxHelper(scene1.portal)
 helper.update()
-scene1.add(helper)
+// scene1.add(helper)
 
 var inPrimaryWorld = true
 var canSwitch = false
@@ -99,7 +99,7 @@ window.THREE = THREE
 window.scene = scene1
 requestAnimationFrame(animate)
 
-},{"./lib/EffectComposer":5,"./lib/FlyControls":6,"./lib/RenderPass":9,"./scene1":19,"./scene2":20,"fs":22,"glslify":13,"noisejs":14,"three":16,"three-orbit-controls":15}],2:[function(require,module,exports){
+},{"./lib/EffectComposer":5,"./lib/FlyControls":6,"./lib/RenderPass":9,"./scene1":18,"./scene2":19,"noisejs":13,"three":15,"three-orbit-controls":14}],2:[function(require,module,exports){
 /**
 * @author alteredq / http://alteredqualia.com/
 */
@@ -1810,15 +1810,6 @@ module.exports = function(THREE, scene) {
 }
 
 },{}],13:[function(require,module,exports){
-module.exports = function() {
-  throw new Error(
-      "It appears that you're using glslify in browserify without "
-    + "its transform applied. Make sure that you've set up glslify as a source transform: "
-    + "https://github.com/substack/node-browserify#browserifytransform"
-  )
-}
-
-},{}],14:[function(require,module,exports){
 /*
  * A speed-improved perlin and simplex noise algorithms for 2D.
  *
@@ -2147,7 +2138,7 @@ module.exports = function() {
 
 })(typeof module === "undefined" ? this : module.exports);
 
-},{}],15:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 module.exports = function(THREE) {
 	var MOUSE = THREE.MOUSE
 	if (!MOUSE)
@@ -3268,7 +3259,7 @@ module.exports = function(THREE) {
 	return OrbitControls;
 }
 
-},{}],16:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 // File:src/Three.js
 
 /**
@@ -45142,8 +45133,8 @@ THREE.MorphBlendMesh.prototype.update = function ( delta ) {
 };
 
 
-},{}],17:[function(require,module,exports){
-var glslify = require('glslify')
+},{}],16:[function(require,module,exports){
+
 
 module.exports = function(THREE) {
 	return function() {
@@ -45179,7 +45170,7 @@ module.exports = function(THREE) {
 				radius: {type: 'f', value: 1.0},
 				time: {type: 'f', value: 0}
 			},
-			vertexShader: glslify('./vertex.vs'),
+			vertexShader: "#define GLSLIFY 1\nattribute float idx;\nattribute vec3 color;\nattribute float theta;\nuniform float radius;\nuniform float time;\nvarying vec4 vColor;\n//\n// Description : Array and textureless GLSL 2D/3D/4D simplex\n//               noise functions.\n//      Author : Ian McEwan, Ashima Arts.\n//  Maintainer : ijm\n//     Lastmod : 20110822 (ijm)\n//     License : Copyright (C) 2011 Ashima Arts. All rights reserved.\n//               Distributed under the MIT License. See LICENSE file.\n//               https://github.com/ashima/webgl-noise\n//\n\nvec3 mod289(vec3 x) {\n  return x - floor(x * (1.0 / 289.0)) * 289.0;\n}\n\nvec4 mod289(vec4 x) {\n  return x - floor(x * (1.0 / 289.0)) * 289.0;\n}\n\nvec4 permute(vec4 x) {\n     return mod289(((x*34.0)+1.0)*x);\n}\n\nvec4 taylorInvSqrt(vec4 r)\n{\n  return 1.79284291400159 - 0.85373472095314 * r;\n}\n\nfloat snoise(vec3 v)\n  {\n  const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;\n  const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);\n\n// First corner\n  vec3 i  = floor(v + dot(v, C.yyy) );\n  vec3 x0 =   v - i + dot(i, C.xxx) ;\n\n// Other corners\n  vec3 g = step(x0.yzx, x0.xyz);\n  vec3 l = 1.0 - g;\n  vec3 i1 = min( g.xyz, l.zxy );\n  vec3 i2 = max( g.xyz, l.zxy );\n\n  //   x0 = x0 - 0.0 + 0.0 * C.xxx;\n  //   x1 = x0 - i1  + 1.0 * C.xxx;\n  //   x2 = x0 - i2  + 2.0 * C.xxx;\n  //   x3 = x0 - 1.0 + 3.0 * C.xxx;\n  vec3 x1 = x0 - i1 + C.xxx;\n  vec3 x2 = x0 - i2 + C.yyy; // 2.0*C.x = 1/3 = C.y\n  vec3 x3 = x0 - D.yyy;      // -1.0+3.0*C.x = -0.5 = -D.y\n\n// Permutations\n  i = mod289(i);\n  vec4 p = permute( permute( permute(\n             i.z + vec4(0.0, i1.z, i2.z, 1.0 ))\n           + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))\n           + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));\n\n// Gradients: 7x7 points over a square, mapped onto an octahedron.\n// The ring size 17*17 = 289 is close to a multiple of 49 (49*6 = 294)\n  float n_ = 0.142857142857; // 1.0/7.0\n  vec3  ns = n_ * D.wyz - D.xzx;\n\n  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);  //  mod(p,7*7)\n\n  vec4 x_ = floor(j * ns.z);\n  vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)\n\n  vec4 x = x_ *ns.x + ns.yyyy;\n  vec4 y = y_ *ns.x + ns.yyyy;\n  vec4 h = 1.0 - abs(x) - abs(y);\n\n  vec4 b0 = vec4( x.xy, y.xy );\n  vec4 b1 = vec4( x.zw, y.zw );\n\n  //vec4 s0 = vec4(lessThan(b0,0.0))*2.0 - 1.0;\n  //vec4 s1 = vec4(lessThan(b1,0.0))*2.0 - 1.0;\n  vec4 s0 = floor(b0)*2.0 + 1.0;\n  vec4 s1 = floor(b1)*2.0 + 1.0;\n  vec4 sh = -step(h, vec4(0.0));\n\n  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;\n  vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;\n\n  vec3 p0 = vec3(a0.xy,h.x);\n  vec3 p1 = vec3(a0.zw,h.y);\n  vec3 p2 = vec3(a1.xy,h.z);\n  vec3 p3 = vec3(a1.zw,h.w);\n\n//Normalise gradients\n  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));\n  p0 *= norm.x;\n  p1 *= norm.y;\n  p2 *= norm.z;\n  p3 *= norm.w;\n\n// Mix final noise value\n  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);\n  m = m * m;\n  return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1),\n                                dot(p2,x2), dot(p3,x3) ) );\n  }\n\nvec4 doNoise(vec4 p, float period, float amt) {\n\tfloat nx = snoise(vec3(idx * period, time, 0.0)) * amt ;\n\tfloat ny = snoise(vec3(0.0, idx * period * 1.0, time)) * amt;\n\tfloat nz = snoise(vec3(time, 0.0, idx * period)) * amt ;\n\treturn p += vec4(nx, ny, nz, 0.0);\n}\nvoid main() {\n\tfloat ind = idx;\n\tvec4 p = projectionMatrix *\n\t\tmodelViewMatrix *\n\t\tvec4(vec3(radius * cos(theta) * 2.0, 0.0, radius * sin(theta) * 2.0),1.0);\n\tvec4 origP = p;\n\n\tp = doNoise(p, 0.20, 0.2);\n\tp = doNoise(p, 0.10, 0.1);\n\tvColor = vec4(1.0);\n\tfloat d = distance(p, origP);\n\t// vColor.a = 1.0 - pow(d / 0.1,1.0);\n\tvColor.a = 0.1;\n\tgl_Position = p;\n\tgl_PointSize = 10.0;\n}\n",
 			fragmentShader: `
 			uniform sampler2D tex;
 			varying vec4 vColor;
@@ -45202,7 +45193,7 @@ module.exports = function(THREE) {
 	}
 }
 
-},{"glslify":13}],18:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 module.exports = function(THREE, scene) {
 	var Noisering = require('./noisering/noisering')(THREE)
 
@@ -45217,7 +45208,7 @@ module.exports = function(THREE, scene) {
 	return portal
 }
 
-},{"./noisering/noisering":17}],19:[function(require,module,exports){
+},{"./noisering/noisering":16}],18:[function(require,module,exports){
 module.exports = function(THREE, groundGeometry) {
 	var OBJLoader = require('./lib/ObjLoader')(THREE)
 	var scene = new THREE.Scene()
@@ -45274,7 +45265,7 @@ module.exports = function(THREE, groundGeometry) {
 
 }
 
-},{"./lib/ObjLoader":8,"./lighting":12,"./portal":18,"./skybox":21}],20:[function(require,module,exports){
+},{"./lib/ObjLoader":8,"./lighting":12,"./portal":17,"./skybox":20}],19:[function(require,module,exports){
 module.exports = function(THREE, groundGeometry) {
 	var scene = new THREE.Scene()
 	require('./lighting')(THREE, scene)
@@ -45323,7 +45314,7 @@ module.exports = function(THREE, groundGeometry) {
 
 }
 
-},{"./lighting":12,"./portal":18,"./skybox":21}],21:[function(require,module,exports){
+},{"./lighting":12,"./portal":17,"./skybox":20}],20:[function(require,module,exports){
 var SKY_SIZE = 150
 module.exports = function(THREE, dir, ext) {
 	var skyGeometry = new THREE.BoxGeometry(SKY_SIZE, SKY_SIZE, SKY_SIZE)
@@ -45340,7 +45331,5 @@ module.exports = function(THREE, dir, ext) {
 	var skybox = new THREE.Mesh(skyGeometry, skymat)
 	return skybox
 }
-
-},{}],22:[function(require,module,exports){
 
 },{}]},{},[1]);
